@@ -10,7 +10,7 @@
 // sebelum akhirnya melaporkan error yang jelas ke frontend.
 
 const MAX_ATTEMPTS = 3;
-const MODEL = "gemini-2.5-flash";
+const MODEL = "gemini-3.6-flash";
 
 exports.handler = async function (event) {
   if (event.httpMethod !== "POST") {
