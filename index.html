@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Generator Soal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<style>
+  :root{
+    --bg: #F4F5F7;
+    --surface: #FFFFFF;
+    --border: #E1E4EA;
+    --border-strong: #C9CFDA;
+    --ink: #161A20;
+    --ink-soft: #5B6472;
+    --ink-faint: #8A93A3;
+    --accent: #23439E;
+    --accent-hover: #1C3480;
+    --accent-soft: #EBEFFA;
+    --success: #1B7A50;
+    --success-soft: #E7F4ED;
+    --danger: #B0362B;
+    --danger-soft: #FBEBE9;
+    --radius: 8px;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter', -apple-system, sans-serif;
+    min-height:100vh;
+    padding:0 0 90px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .topbar{
+    background:var(--surface);
+    border-bottom:1px solid var(--border);
+    padding:18px 28px;
+  }
+  .topbar-inner{
+    max-width:860px;
+    margin:0 auto;
+    display:flex;
+    align-items:center;
+    gap:12px;
+  }
+  .mark{
+    width:30px; height:30px;
+    border-radius:7px;
+    background:var(--accent);
+    position:relative;
+    flex-shrink:0;
+  }
+  .mark::before, .mark::after{
+    content:"";
+    position:absolute;
+    background:#fff;
+    border-radius:1px;
+  }
+  .mark::before{ width:13px; height:2px; top:11px; left:8.5px; }
+  .mark::after{ width:8px; height:2px; top:17px; left:8.5px; }
+  .brand-name{ font-weight:600; font-size:14.5px; letter-spacing:-0.01em; }
+  .brand-sub{ font-size:12px; color:var(--ink-faint); margin-left:auto; }
+
+  .wrap{ max-width:860px; margin:0 auto; padding:0 28px; }
+
+  .hero{ padding:44px 0 8px; }
+  .hero h1{
+    font-family:'Source Serif 4', serif;
+    font-weight:600;
+    font-size:32px;
+    line-height:1.2;
+    letter-spacing:-0.01em;
+    margin:0 0 10px;
+  }
+  .hero p{
+    font-size:14.5px;
+    color:var(--ink-soft);
+    line-height:1.6;
+    max-width:56ch;
+    margin:0;
+  }
+
+  .card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    margin-top:20px;
+    overflow:hidden;
+  }
+  .card-header{
+    display:flex;
+    align-items:center;
+    gap:11px;
+    padding:18px 22px;
+    border-bottom:1px solid var(--border);
+  }
+  .step-badge{
+    width:22px; height:22px;
+    border-radius:50%;
+    background:var(--accent-soft);
+    color:var(--accent);
+    font-size:12px;
+    font-weight:600;
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0;
+  }
+  .card-header h2{
+    font-size:15px;
+    font-weight:600;
+    margin:0;
+    letter-spacing:-0.005em;
+  }
+  .card-body{ padding:22px; }
+
+  .dropzone{
+    border:1px solid var(--border-strong);
+    border-radius:6px;
+    background:#FBFBFC;
+    padding:28px 20px;
+    text-align:center;
+    cursor:pointer;
+    transition:border-color .15s ease, background .15s ease;
+  }
+  .dropzone:hover, .dropzone.drag{
+    border-color:var(--accent);
+    background:var(--accent-soft);
+  }
+  .dropzone .dz-icon{
+    width:34px; height:34px;
+    margin:0 auto 10px;
+    border-radius:7px;
+    background:var(--accent-soft);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .dropzone .dz-icon svg{ width:16px; height:16px; }
+  .dropzone .dz-main{ font-size:13.5px; color:var(--ink); font-weight:500; margin-bottom:3px; }
+  .dropzone .dz-sub{ font-size:12px; color:var(--ink-faint); }
+  input[type=file]{ display:none; }
+
+  .filepill{
+    display:inline-flex;
+    align-items:center;
+    gap:9px;
+    margin-top:12px;
+    background:var(--success-soft);
+    border:1px solid #CBE6D6;
+    color:var(--success);
+    padding:7px 11px;
+    font-size:12.5px;
+    font-weight:500;
+    border-radius:6px;
+  }
+  .filepill button{
+    background:none; border:none; color:var(--success); cursor:pointer;
+    font-family:inherit; font-size:14px; padding:0; line-height:1; opacity:0.7;
+  }
+  .filepill button:hover{ opacity:1; }
+
+  .or-line{
+    display:flex; align-items:center; gap:12px;
+    margin:18px 0; color:var(--ink-faint); font-size:12px;
+  }
+  .or-line::before, .or-line::after{
+    content:""; flex:1; height:1px; background:var(--border);
+  }
+  textarea{
+    width:100%;
+    min-height:100px;
+    resize:vertical;
+    font-family:'Inter', sans-serif;
+    font-size:13.5px;
+    color:var(--ink);
+    background:var(--surface);
+    border:1px solid var(--border-strong);
+    border-radius:6px;
+    padding:12px 14px;
+    line-height:1.6;
+  }
+  textarea:focus, input:focus, select:focus{
+    outline:none;
+    border-color:var(--accent);
+    box-shadow:0 0 0 3px var(--accent-soft);
+  }
+
+  .settings-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr 1fr;
+    gap:16px;
+  }
+  @media (max-width:560px){ .settings-grid{ grid-template-columns:1fr; } }
+  .field label{
+    display:block;
+    font-size:12px;
+    font-weight:500;
+    color:var(--ink-soft);
+    margin-bottom:7px;
+  }
+  .field input[type=number], .field select{
+    width:100%;
+    font-family:'Inter', sans-serif;
+    font-size:13.5px;
+    padding:9px 11px;
+    border:1px solid var(--border-strong);
+    border-radius:6px;
+    background:var(--surface);
+    color:var(--ink);
+  }
+
+  .btn{
+    font-family:'Inter', sans-serif;
+    font-weight:600;
+    font-size:13.5px;
+    border:none;
+    border-radius:6px;
+    padding:11px 20px;
+    cursor:pointer;
+    transition:background .12s ease, opacity .15s ease, border-color .12s ease;
+  }
+  .btn-primary{ background:var(--accent); color:#fff; }
+  .btn-primary:hover:not(:disabled){ background:var(--accent-hover); }
+  .btn-primary:disabled{ opacity:0.45; cursor:not-allowed; }
+  .btn-ghost{
+    background:var(--surface); color:var(--ink); border:1px solid var(--border-strong);
+  }
+  .btn-ghost:hover{ border-color:var(--ink-faint); }
+  .actions{ display:flex; gap:10px; margin-top:22px; flex-wrap:wrap; align-items:center; }
+
+  .error-note{
+    margin-top:14px;
+    border:1px solid #F0C6C1;
+    border-radius:6px;
+    padding:10px 13px;
+    background:var(--danger-soft);
+    color:var(--danger);
+    font-size:12.5px;
+    line-height:1.5;
+  }
+  .error-note .retry-btn{
+    display:inline-block; margin-top:8px; background:none; border:none;
+    color:var(--danger); font-weight:600; font-size:12.5px; cursor:pointer;
+    text-decoration:underline; padding:0; font-family:inherit;
+  }
+  .status{
+    margin-top:14px;
+    font-size:12.5px;
+    color:var(--ink-soft);
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .spinner{
+    width:14px; height:14px;
+    border:2px solid var(--border);
+    border-top-color:var(--accent);
+    border-radius:50%;
+    animation:spin 0.8s linear infinite;
+    flex-shrink:0;
+  }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+
+  .healed-note{
+    margin-top:14px;
+    border:1px solid #CBE6D6;
+    border-radius:6px;
+    padding:9px 13px;
+    background:var(--success-soft);
+    color:var(--success);
+    font-size:12px;
+    line-height:1.5;
+  }
+
+  .quiz-card{ margin-top:28px; }
+  .quiz-header{
+    display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;
+    padding:20px 22px;
+    border-bottom:1px solid var(--border);
+  }
+  .quiz-header h2{
+    font-family:'Source Serif 4', serif;
+    font-weight:600;
+    font-size:20px;
+    margin:0;
+  }
+  .score-badge{
+    font-size:12px; font-weight:500; color:var(--accent);
+    background:var(--accent-soft);
+    padding:5px 10px;
+    border-radius:20px;
+  }
+  .qgroup{ padding:6px 22px 6px; }
+  .qgroup-title{
+    font-size:11.5px;
+    font-weight:600;
+    color:var(--ink-faint);
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+    margin:16px 0 4px;
+  }
+  .qcard{
+    padding:18px 0;
+    border-bottom:1px solid var(--border);
+  }
+  .qcard:last-child{ border-bottom:none; }
+  .qtext{
+    font-size:14px; line-height:1.65; margin:0 0 13px; color:var(--ink); font-weight:500;
+  }
+  .qnum{ color:var(--accent); font-weight:600; }
+  .options{ display:flex; flex-direction:column; gap:8px; }
+  .option{
+    display:flex; align-items:flex-start; gap:10px;
+    padding:10px 13px;
+    border:1px solid var(--border-strong);
+    border-radius:6px;
+    background:var(--surface);
+    cursor:pointer;
+    font-size:13.5px;
+    line-height:1.5;
+    transition:background .1s ease, border-color .1s ease;
+  }
+  .option:hover{ border-color:var(--accent); }
+  .option input{ margin-top:2px; accent-color:var(--accent); flex-shrink:0; }
+  .option.correct{ background:var(--success-soft); border-color:var(--success); }
+  .option.wrong{ background:var(--danger-soft); border-color:var(--danger); }
+  .option .tag{
+    margin-left:auto; font-size:11px; font-weight:600; white-space:nowrap;
+  }
+  .option.correct .tag{ color:var(--success); }
+  .option.wrong .tag{ color:var(--danger); }
+  .explain{
+    margin-top:11px; font-size:12.5px; color:var(--ink-soft);
+    background:#F5F6F8; border-radius:6px;
+    padding:10px 13px; line-height:1.55; display:none;
+  }
+  .explain strong{ color:var(--ink); }
+  .explain.show{ display:block; }
+  .essay-answer{
+    width:100%; min-height:88px; margin-top:2px;
+  }
+  .model-answer{
+    margin-top:11px; font-size:12.5px; color:var(--ink-soft);
+    background:#F5F6F8; border-radius:6px;
+    padding:10px 13px; line-height:1.6; display:none;
+  }
+  .model-answer.show{ display:block; }
+  .model-answer strong{ color:var(--ink); }
+  .check-toggle{
+    background:none; border:none; color:var(--accent); font-family:inherit;
+    font-size:12px; font-weight:500; cursor:pointer; padding:0; margin-top:10px;
+  }
+  .check-toggle:hover{ text-decoration:underline; }
+  .quiz-footer{ padding:18px 22px; }
+
+  footer.note{
+    margin-top:26px; font-size:12px; color:var(--ink-faint); text-align:center;
+  }
+  .hidden{ display:none !important; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="mark"></div>
+    <span class="brand-name">Generator Soal</span>
+    <span class="brand-sub">dari bahan ajar ke soal latihan</span>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="hero">
+    <h1>Buat soal latihan dari materi pelajaran</h1>
+    <p>Unggah materi, tentukan jumlah dan tingkat kesulitan, lalu sistem menyusun soal pilihan ganda dan essay berdasarkan isi materi tersebut. Kalau hasil dari AI tidak sesuai format, sistem otomatis meminta AI memperbaikinya sendiri.</p>
+  </div>
+
+  <div id="setup-section">
+    <div class="card">
+      <div class="card-header">
+        <span class="step-badge">1</span>
+        <h2>Bahan ajar</h2>
+      </div>
+      <div class="card-body">
+        <div class="dropzone" id="dropzone">
+          <div class="dz-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#23439E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="m7 8 5-5 5 5"/><path d="M4 17v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+          </div>
+          <div class="dz-main">Klik untuk pilih file, atau seret ke sini</div>
+          <div class="dz-sub">.txt &middot; .pdf &middot; .docx &middot; maks &sim;8 MB</div>
+          <input type="file" id="fileInput" accept=".txt,.pdf,.docx">
+        </div>
+        <div id="filepillWrap"></div>
+
+        <div class="or-line">atau tempel teks langsung</div>
+        <textarea id="pasteText" placeholder="Tempelkan isi materi pelajaran di sini..."></textarea>
+
+        <div id="extractStatus"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="step-badge">2</span>
+        <h2>Pengaturan soal</h2>
+      </div>
+      <div class="card-body">
+        <div class="settings-grid">
+          <div class="field">
+            <label for="numMcq">Jumlah pilihan ganda</label>
+            <input type="number" id="numMcq" value="5" min="0" max="15">
+          </div>
+          <div class="field">
+            <label for="numEssay">Jumlah essay</label>
+            <input type="number" id="numEssay" value="3" min="0" max="10">
+          </div>
+          <div class="field">
+            <label for="difficulty">Tingkat kesulitan</label>
+            <select id="difficulty">
+              <option value="mudah">Mudah</option>
+              <option value="sedang" selected>Sedang</option>
+              <option value="sulit">Sulit</option>
+              <option value="campuran">Campuran</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="btn btn-primary" id="generateBtn">Buat soal</button>
+        </div>
+        <div id="genStatus"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="quiz-section" class="card quiz-card hidden"></div>
+
+  <footer class="note">Soal dibuat otomatis dari materi yang diunggah — periksa kembali sebelum digunakan.</footer>
+</div>
+
+<script>
+if (window.pdfjsLib) {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+const filepillWrap = document.getElementById('filepillWrap');
+const pasteText = document.getElementById('pasteText');
+const extractStatus = document.getElementById('extractStatus');
+const generateBtn = document.getElementById('generateBtn');
+const genStatus = document.getElementById('genStatus');
+const setupSection = document.getElementById('setup-section');
+const quizSection = document.getElementById('quiz-section');
+
+let extractedText = '';
+
+dropzone.addEventListener('click', () => fileInput.click());
+dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
+dropzone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropzone.classList.remove('drag');
+  if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', e => {
+  if (e.target.files.length) handleFile(e.target.files[0]);
+});
+
+function showFilePill(name){
+  filepillWrap.innerHTML = '';
+  const pill = document.createElement('div');
+  pill.className = 'filepill';
+  pill.innerHTML = `<span>${escapeHtml(name)}</span>`;
+  const btn = document.createElement('button');
+  btn.textContent = '✕';
+  btn.onclick = () => {
+    extractedText = '';
+    filepillWrap.innerHTML = '';
+    extractStatus.innerHTML = '';
+    fileInput.value = '';
+  };
+  pill.appendChild(btn);
+  filepillWrap.appendChild(pill);
+}
+
+function escapeHtml(s){
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+async function handleFile(file){
+  showFilePill(file.name);
+  extractStatus.innerHTML = `<div class="status"><div class="spinner"></div>Membaca ${escapeHtml(file.name)}...</div>`;
+  extractedText = '';
+  try{
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (ext === 'txt'){
+      extractedText = await file.text();
+    } else if (ext === 'pdf'){
+      extractedText = await extractPdf(file);
+    } else if (ext === 'docx'){
+      extractedText = await extractDocx(file);
+    } else {
+      throw new Error('Format file belum didukung. Gunakan .txt, .pdf, atau .docx.');
+    }
+    if (!extractedText || !extractedText.trim()){
+      throw new Error('Tidak ada teks yang bisa dibaca dari file ini.');
+    }
+    extractStatus.innerHTML = `<div class="status">Berhasil membaca ${extractedText.trim().split(/\s+/).length.toLocaleString('id-ID')} kata dari file.</div>`;
+    pasteText.value = '';
+  } catch(err){
+    console.error(err);
+    extractStatus.innerHTML = `<div class="error-note">${escapeHtml(err.message || 'Gagal membaca file ini.')}</div>`;
+    extractedText = '';
+  }
+}
+
+async function extractPdf(file){
+  if (!window.pdfjsLib) throw new Error('Pembaca PDF gagal dimuat. Coba tempel teks materi secara manual.');
+  const buf = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+  let text = '';
+  const maxPages = Math.min(pdf.numPages, 60);
+  for (let i = 1; i <= maxPages; i++){
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    text += content.items.map(it => it.str).join(' ') + '\n\n';
+  }
+  return text;
+}
+
+async function extractDocx(file){
+  if (!window.mammoth) throw new Error('Pembaca DOCX gagal dimuat. Coba tempel teks materi secara manual.');
+  const buf = await file.arrayBuffer();
+  const result = await mammoth.extractRawText({ arrayBuffer: buf });
+  return result.value;
+}
+
+function getSourceText(){
+  const pasted = pasteText.value.trim();
+  if (pasted) return pasted;
+  return extractedText;
+}
+
+generateBtn.addEventListener('click', () => runGenerate());
+
+async function runGenerate(){
+  const sourceText = getSourceText().trim();
+  genStatus.innerHTML = '';
+
+  if (!sourceText){
+    genStatus.innerHTML = `<div class="error-note">Unggah file atau tempelkan teks materi terlebih dahulu.</div>`;
+    return;
+  }
+  const numMcq = Math.max(0, Math.min(15, parseInt(document.getElementById('numMcq').value) || 0));
+  const numEssay = Math.max(0, Math.min(10, parseInt(document.getElementById('numEssay').value) || 0));
+  const difficulty = document.getElementById('difficulty').value;
+
+  if (numMcq === 0 && numEssay === 0){
+    genStatus.innerHTML = `<div class="error-note">Buat minimal satu soal pilihan ganda atau essay.</div>`;
+    return;
+  }
+
+  generateBtn.disabled = true;
+  genStatus.innerHTML = `<div class="status"><div class="spinner"></div>Menyusun soal dari materi... (sistem otomatis memperbaiki hasil jika ada kesalahan format)</div>`;
+
+  try{
+    const result = await callGenerateApi(sourceText, numMcq, numEssay, difficulty);
+    renderQuiz(result.quiz);
+    if (result.attempts && result.attempts > 1){
+      genStatus.innerHTML = `<div class="healed-note">Soal berhasil disusun setelah AI memperbaiki hasilnya secara otomatis (percobaan ke-${result.attempts}).</div>`;
+    } else {
+      genStatus.innerHTML = '';
+    }
+  } catch(err){
+    console.error(err);
+    genStatus.innerHTML = `
+      <div class="error-note">
+        ${escapeHtml(err.message || 'Gagal membuat soal. Coba lagi.')}
+        <br><button class="retry-btn" id="retryBtn">Coba lagi</button>
+      </div>`;
+    const retryBtn = document.getElementById('retryBtn');
+    if (retryBtn) retryBtn.addEventListener('click', () => runGenerate());
+  } finally {
+    generateBtn.disabled = false;
+  }
+}
+
+async function callGenerateApi(sourceText, numMcq, numEssay, difficulty){
+  const trimmed = sourceText.length > 24000 ? sourceText.slice(0, 24000) : sourceText;
+
+  const response = await fetch('/api/generate-quiz', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text: trimmed, numMcq, numEssay, difficulty })
+  });
+
+  let data;
+  try{
+    data = await response.json();
+  } catch(e){
+    throw new Error('Server tidak memberi respons yang bisa dibaca. Pastikan fungsi Netlify sudah aktif.');
+  }
+
+  if (!response.ok || data.error){
+    throw new Error(data.error || `Server mengembalikan status ${response.status}.`);
+  }
+  if (!data.quiz){
+    throw new Error('Respons server tidak berisi data soal.');
+  }
+  data.quiz.mcq = Array.isArray(data.quiz.mcq) ? data.quiz.mcq : [];
+  data.quiz.essay = Array.isArray(data.quiz.essay) ? data.quiz.essay : [];
+  return data;
+}
+
+function renderQuiz(quiz){
+  quizSection.classList.remove('hidden');
+  quizSection.innerHTML = '';
+
+  const header = document.createElement('div');
+  header.className = 'quiz-header';
+  header.innerHTML = `<h2>${escapeHtml(quiz.topic || 'Soal latihan')}</h2><span class="score-badge" id="scoreBadge"></span>`;
+  quizSection.appendChild(header);
+
+  if (quiz.mcq.length){
+    const g = document.createElement('div');
+    g.className = 'qgroup';
+    g.innerHTML = `<p class="qgroup-title">Pilihan ganda</p>`;
+    quiz.mcq.forEach((q, i) => {
+      const card = document.createElement('div');
+      card.className = 'qcard';
+      const optsHtml = q.options.map((opt, oi) => `
+        <label class="option" data-oi="${oi}">
+          <input type="radio" name="mcq-${i}" value="${oi}">
+          <span>${escapeHtml(opt)}</span>
+          <span class="tag"></span>
+        </label>
+      `).join('');
+      card.innerHTML = `
+        <p class="qtext"><span class="qnum">${i + 1}.</span> ${escapeHtml(q.question)}</p>
+        <div class="options" id="mcq-opts-${i}">${optsHtml}</div>
+        <div class="explain" id="mcq-explain-${i}"><strong>Penjelasan:</strong> ${escapeHtml(q.explanation || '')}</div>
+      `;
+      g.appendChild(card);
+
+      card.querySelectorAll(`input[name="mcq-${i}"]`).forEach(radio => {
+        radio.addEventListener('change', () => checkMcq(i, q));
+      });
+    });
+    quizSection.appendChild(g);
+  }
+
+  if (quiz.essay.length){
+    const g = document.createElement('div');
+    g.className = 'qgroup';
+    g.innerHTML = `<p class="qgroup-title">Essay</p>`;
+    quiz.essay.forEach((q, i) => {
+      const card = document.createElement('div');
+      card.className = 'qcard';
+      card.innerHTML = `
+        <p class="qtext"><span class="qnum">${i + 1}.</span> ${escapeHtml(q.question)}</p>
+        <textarea class="essay-answer" placeholder="Tulis jawabanmu di sini..." id="essay-ans-${i}"></textarea>
+        <button class="check-toggle" data-idx="${i}">Lihat contoh jawaban</button>
+        <div class="model-answer" id="essay-model-${i}"><strong>Contoh jawaban:</strong> ${escapeHtml(q.model_answer || '')}</div>
+      `;
+      g.appendChild(card);
+      card.querySelector('.check-toggle').addEventListener('click', (e) => {
+        const el = document.getElementById(`essay-model-${i}`);
+        el.classList.toggle('show');
+        e.target.textContent = el.classList.contains('show') ? 'Sembunyikan contoh jawaban' : 'Lihat contoh jawaban';
+      });
+    });
+    quizSection.appendChild(g);
+  }
+
+  const footerActions = document.createElement('div');
+  footerActions.className = 'quiz-footer';
+  footerActions.innerHTML = `<button class="btn btn-ghost" id="backBtn">Buat soal baru</button>`;
+  quizSection.appendChild(footerActions);
+  document.getElementById('backBtn').addEventListener('click', () => {
+    quizSection.classList.add('hidden');
+    quizSection.innerHTML = '';
+    setupSection.scrollIntoView({ behavior: 'smooth' });
+  });
+
+  window.__quizState = { mcqTotal: quiz.mcq.length, mcqAnswered: 0, mcqCorrect: 0 };
+  updateScoreBadge();
+
+  quizSection.scrollIntoView({ behavior: 'smooth' });
+}
+
+function checkMcq(i, q){
+  const wrap = document.getElementById(`mcq-opts-${i}`);
+  const options = wrap.querySelectorAll('.option');
+  const selected = wrap.querySelector(`input[name="mcq-${i}"]:checked`);
+  const selVal = parseInt(selected.value);
+
+  if (!wrap.dataset.answered){
+    wrap.dataset.answered = '1';
+    window.__quizState.mcqAnswered++;
+    if (selVal === q.correct_index) window.__quizState.mcqCorrect++;
+    updateScoreBadge();
+  }
+
+  options.forEach(opt => {
+    const oi = parseInt(opt.dataset.oi);
+    opt.querySelector('input').disabled = true;
+    const tag = opt.querySelector('.tag');
+    if (oi === q.correct_index){
+      opt.classList.add('correct');
+      tag.textContent = 'Benar';
+    } else if (oi === selVal){
+      opt.classList.add('wrong');
+      tag.textContent = 'Pilihanmu';
+    }
+  });
+  document.getElementById(`mcq-explain-${i}`).classList.add('show');
+}
+
+function updateScoreBadge(){
+  const s = window.__quizState;
+  const badge = document.getElementById('scoreBadge');
+  if (!badge || !s || s.mcqTotal === 0) return;
+  badge.textContent = `Skor PG: ${s.mcqCorrect}/${s.mcqAnswered} terjawab dari ${s.mcqTotal}`;
+}
+</script>
+</body>
+</html>
