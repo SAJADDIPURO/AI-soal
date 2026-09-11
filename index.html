@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <style>
   :root{
     --bg: #F4F5F7;
@@ -228,6 +229,7 @@
     background:var(--surface); color:var(--ink); border:1px solid var(--border-strong);
   }
   .btn-ghost:hover{ border-color:var(--ink-faint); }
+  .btn-ghost:disabled{ opacity:0.45; cursor:not-allowed; }
   .actions{ display:flex; gap:10px; margin-top:22px; flex-wrap:wrap; align-items:center; }
 
   .error-note{
@@ -353,12 +355,75 @@
     font-size:12px; font-weight:500; cursor:pointer; padding:0; margin-top:10px;
   }
   .check-toggle:hover{ text-decoration:underline; }
-  .quiz-footer{ padding:18px 22px; }
+  .quiz-footer{ padding:18px 22px; display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
 
   footer.note{
     margin-top:26px; font-size:12px; color:var(--ink-faint); text-align:center;
   }
   .hidden{ display:none !important; }
+
+  /* ==== Template khusus PDF (tidak pernah kelihatan di layar) ==== */
+  #pdfExport{
+    position:fixed;
+    top:0; left:-99999px;
+    width:760px;
+    background:#ffffff;
+    color:#161A20;
+    font-family:'Inter', -apple-system, sans-serif;
+    padding:36px 40px;
+  }
+  #pdfExport .pdf-title{
+    font-family:'Source Serif 4', serif;
+    font-weight:700;
+    font-size:22px;
+    margin:0 0 4px;
+    color:#161A20;
+  }
+  #pdfExport .pdf-sub{
+    font-size:11.5px;
+    color:#5B6472;
+    margin:0 0 20px;
+    border-bottom:2px solid #23439E;
+    padding-bottom:14px;
+  }
+  #pdfExport .pdf-section-title{
+    font-size:13px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+    color:#23439E;
+    margin:22px 0 10px;
+  }
+  #pdfExport .pdf-q{
+    font-size:12.5px;
+    line-height:1.6;
+    margin:0 0 8px;
+    page-break-inside:avoid;
+  }
+  #pdfExport .pdf-q b{ color:#23439E; }
+  #pdfExport .pdf-opts{ margin:0 0 14px 18px; padding:0; list-style:none; }
+  #pdfExport .pdf-opts li{
+    font-size:12px; line-height:1.55; margin-bottom:4px; color:#161A20;
+  }
+  #pdfExport .pdf-opt-letter{ font-weight:600; margin-right:6px; }
+  #pdfExport .pdf-essay-block{ margin:0 0 22px; page-break-inside:avoid; }
+  #pdfExport .pdf-essay-lines{
+    margin-top:8px;
+    border-bottom:1px solid #C9CFDA;
+    height:22px;
+  }
+  #pdfExport .pdf-answerkey{
+    margin-top:26px;
+    padding-top:14px;
+    border-top:2px solid #23439E;
+  }
+  #pdfExport .pdf-answerkey-item{
+    font-size:11.5px; line-height:1.7; color:#5B6472;
+  }
+  #pdfExport .pdf-answerkey-item b{ color:#161A20; }
+  #pdfExport .pdf-model-answer{
+    font-size:11.5px; line-height:1.6; color:#5B6472; margin:2px 0 14px;
+  }
 </style>
 </head>
 <body>
@@ -440,6 +505,9 @@
   <footer class="note">Soal dibuat otomatis dari materi yang diunggah — periksa kembali sebelum digunakan.</footer>
 </div>
 
+<!-- Template tersembunyi khusus buat di-render jadi PDF -->
+<div id="pdfExport"></div>
+
 <script>
 if (window.pdfjsLib) {
   pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -456,6 +524,7 @@ const setupSection = document.getElementById('setup-section');
 const quizSection = document.getElementById('quiz-section');
 
 let extractedText = '';
+let lastQuiz = null; // simpan hasil soal terakhir buat dipakai bikin PDF
 
 dropzone.addEventListener('click', () => fileInput.click());
 dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag'); });
@@ -618,6 +687,8 @@ async function callGenerateApi(sourceText, numMcq, numEssay, difficulty){
 }
 
 function renderQuiz(quiz){
+  lastQuiz = quiz; // simpan buat export PDF
+
   quizSection.classList.remove('hidden');
   quizSection.innerHTML = '';
 
@@ -679,13 +750,17 @@ function renderQuiz(quiz){
 
   const footerActions = document.createElement('div');
   footerActions.className = 'quiz-footer';
-  footerActions.innerHTML = `<button class="btn btn-ghost" id="backBtn">Buat soal baru</button>`;
+  footerActions.innerHTML = `
+    <button class="btn btn-ghost" id="backBtn">Buat soal baru</button>
+    <button class="btn btn-primary" id="downloadPdfBtn">Unduh PDF</button>
+  `;
   quizSection.appendChild(footerActions);
   document.getElementById('backBtn').addEventListener('click', () => {
     quizSection.classList.add('hidden');
     quizSection.innerHTML = '';
     setupSection.scrollIntoView({ behavior: 'smooth' });
   });
+  document.getElementById('downloadPdfBtn').addEventListener('click', downloadQuizPdf);
 
   window.__quizState = { mcqTotal: quiz.mcq.length, mcqAnswered: 0, mcqCorrect: 0 };
   updateScoreBadge();
@@ -726,6 +801,98 @@ function updateScoreBadge(){
   const badge = document.getElementById('scoreBadge');
   if (!badge || !s || s.mcqTotal === 0) return;
   badge.textContent = `Skor PG: ${s.mcqCorrect}/${s.mcqAnswered} terjawab dari ${s.mcqTotal}`;
+}
+
+/* ================== EXPORT PDF ================== */
+
+const OPTION_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F'];
+
+function buildPdfHtml(quiz){
+  let html = '';
+  html += `<div class="pdf-title">${escapeHtml(quiz.topic || 'Soal Latihan')}</div>`;
+  html += `<div class="pdf-sub">Nama: __________________________&nbsp;&nbsp;&nbsp;&nbsp; Kelas: ___________&nbsp;&nbsp;&nbsp;&nbsp; Tanggal: ___________</div>`;
+
+  if (quiz.mcq.length){
+    html += `<div class="pdf-section-title">Bagian A — Pilihan Ganda</div>`;
+    quiz.mcq.forEach((q, i) => {
+      html += `<p class="pdf-q"><b>${i + 1}.</b> ${escapeHtml(q.question)}</p>`;
+      html += `<ul class="pdf-opts">`;
+      q.options.forEach((opt, oi) => {
+        html += `<li><span class="pdf-opt-letter">${OPTION_LETTERS[oi] || oi + 1}.</span>${escapeHtml(opt)}</li>`;
+      });
+      html += `</ul>`;
+    });
+  }
+
+  if (quiz.essay.length){
+    html += `<div class="pdf-section-title">Bagian B — Essay</div>`;
+    quiz.essay.forEach((q, i) => {
+      html += `<div class="pdf-essay-block">`;
+      html += `<p class="pdf-q"><b>${i + 1}.</b> ${escapeHtml(q.question)}</p>`;
+      html += `<div class="pdf-essay-lines"></div><div class="pdf-essay-lines"></div><div class="pdf-essay-lines"></div>`;
+      html += `</div>`;
+    });
+  }
+
+  html += `<div class="pdf-answerkey" style="page-break-before:always;">`;
+  html += `<div class="pdf-section-title" style="margin-top:0;">Kunci Jawaban</div>`;
+  if (quiz.mcq.length){
+    quiz.mcq.forEach((q, i) => {
+      const letter = OPTION_LETTERS[q.correct_index] || (q.correct_index + 1);
+      html += `<p class="pdf-answerkey-item"><b>${i + 1}.</b> ${letter}. ${escapeHtml(q.options[q.correct_index] || '')}`;
+      if (q.explanation) html += ` — ${escapeHtml(q.explanation)}`;
+      html += `</p>`;
+    });
+  }
+  if (quiz.essay.length){
+    quiz.essay.forEach((q, i) => {
+      html += `<p class="pdf-answerkey-item" style="margin-top:10px;"><b>Essay ${i + 1}.</b></p>`;
+      html += `<p class="pdf-model-answer">${escapeHtml(q.model_answer || '-')}</p>`;
+    });
+  }
+  html += `</div>`;
+
+  return html;
+}
+
+function downloadQuizPdf(){
+  if (!lastQuiz){
+    alert('Belum ada soal yang bisa diunduh.');
+    return;
+  }
+
+  const btn = document.getElementById('downloadPdfBtn');
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Menyiapkan PDF...';
+
+  const exportEl = document.getElementById('pdfExport');
+  exportEl.innerHTML = buildPdfHtml(lastQuiz);
+
+  const safeTopic = (lastQuiz.topic || 'soal-latihan')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '')
+    .slice(0, 60) || 'soal-latihan';
+
+  const opt = {
+    margin: [12, 12, 14, 12],
+    filename: `${safeTopic}.pdf`,
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+    pagebreak: { mode: ['css', 'legacy'] }
+  };
+
+  html2pdf().set(opt).from(exportEl).save().then(() => {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }).catch((err) => {
+    console.error(err);
+    alert('Gagal membuat PDF. Coba lagi.');
+    btn.disabled = false;
+    btn.textContent = originalText;
+  });
 }
 </script>
 </body>
