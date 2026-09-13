@@ -362,15 +362,32 @@
   }
   .hidden{ display:none !important; }
 
-  /* ==== Template khusus PDF (tidak pernah kelihatan di layar) ==== */
+  /* ==== Template khusus PDF ==== */
   #pdfExport{
-    position:absolute;
-    top:0; left:-9999px;
+    display:none;
+    position:fixed;
+    top:0; left:0;
     width:760px;
     background:#ffffff;
     color:#161A20;
     font-family:'Inter', -apple-system, sans-serif;
     padding:36px 40px;
+  }
+  #pdfExport.pdf-generating{
+    display:block;
+    z-index:9998;
+  }
+  .pdf-overlay{
+    position:fixed; inset:0;
+    background:#ffffff;
+    z-index:9999;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    font-family:'Inter', sans-serif;
+    font-size:14px;
+    color:#5B6472;
   }
   #pdfExport .pdf-title{
     font-family:'Source Serif 4', serif;
@@ -869,6 +886,12 @@ function downloadQuizPdf(){
 
   const exportEl = document.getElementById('pdfExport');
   exportEl.innerHTML = buildPdfHtml(lastQuiz);
+  exportEl.classList.add('pdf-generating');
+
+  const overlay = document.createElement('div');
+  overlay.className = 'pdf-overlay';
+  overlay.textContent = 'Menyiapkan PDF, mohon tunggu...';
+  document.body.appendChild(overlay);
 
   const safeTopic = (lastQuiz.topic || 'soal-latihan')
     .toLowerCase()
@@ -885,15 +908,24 @@ function downloadQuizPdf(){
     pagebreak: { mode: ['css', 'legacy'] }
   };
 
-  html2pdf().set(opt).from(exportEl).save().then(() => {
+  function cleanup(){
+    exportEl.classList.remove('pdf-generating');
+    exportEl.innerHTML = '';
+    overlay.remove();
     btn.disabled = false;
     btn.textContent = originalText;
-  }).catch((err) => {
-    console.error(err);
-    alert('Gagal membuat PDF. Coba lagi.');
-    btn.disabled = false;
-    btn.textContent = originalText;
-  });
+  }
+
+  // Kasih jeda dikit biar browser sempet render elemen sebelum di-capture
+  setTimeout(() => {
+    html2pdf().set(opt).from(exportEl).save().then(() => {
+      cleanup();
+    }).catch((err) => {
+      console.error(err);
+      alert('Gagal membuat PDF. Coba lagi.');
+      cleanup();
+    });
+  }, 80);
 }
 </script>
 </body>
