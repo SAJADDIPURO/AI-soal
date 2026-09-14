@@ -309,52 +309,23 @@
   }
   .qcard:last-child{ border-bottom:none; }
   .qtext{
-    font-size:14px; line-height:1.65; margin:0 0 13px; color:var(--ink); font-weight:500;
+    font-size:14px; line-height:1.65; margin:0 0 10px; color:var(--ink); font-weight:500;
   }
   .qnum{ color:var(--accent); font-weight:600; }
-  .options{ display:flex; flex-direction:column; gap:8px; }
-  .option{
-    display:flex; align-items:flex-start; gap:10px;
-    padding:10px 13px;
-    border:1px solid var(--border-strong);
-    border-radius:6px;
-    background:var(--surface);
-    cursor:pointer;
-    font-size:13.5px;
-    line-height:1.5;
-    transition:background .1s ease, border-color .1s ease;
+  .static-options{ display:flex; flex-direction:column; gap:5px; margin:0 0 10px; }
+  .static-option{ font-size:13.5px; line-height:1.55; color:var(--ink); }
+  .answer-line{
+    font-size:13px; font-weight:600; color:var(--success);
+    background:var(--success-soft); border-radius:6px;
+    padding:8px 12px; display:inline-block;
   }
-  .option:hover{ border-color:var(--accent); }
-  .option input{ margin-top:2px; accent-color:var(--accent); flex-shrink:0; }
-  .option.correct{ background:var(--success-soft); border-color:var(--success); }
-  .option.wrong{ background:var(--danger-soft); border-color:var(--danger); }
-  .option .tag{
-    margin-left:auto; font-size:11px; font-weight:600; white-space:nowrap;
-  }
-  .option.correct .tag{ color:var(--success); }
-  .option.wrong .tag{ color:var(--danger); }
-  .explain{
-    margin-top:11px; font-size:12.5px; color:var(--ink-soft);
+  .answer-line .answer-detail{ font-weight:400; color:var(--ink-soft); margin-left:2px; }
+  .essay-model{
+    margin-top:8px; font-size:13px; color:var(--ink-soft);
     background:#F5F6F8; border-radius:6px;
-    padding:10px 13px; line-height:1.55; display:none;
+    padding:10px 13px; line-height:1.6;
   }
-  .explain strong{ color:var(--ink); }
-  .explain.show{ display:block; }
-  .essay-answer{
-    width:100%; min-height:88px; margin-top:2px;
-  }
-  .model-answer{
-    margin-top:11px; font-size:12.5px; color:var(--ink-soft);
-    background:#F5F6F8; border-radius:6px;
-    padding:10px 13px; line-height:1.6; display:none;
-  }
-  .model-answer.show{ display:block; }
-  .model-answer strong{ color:var(--ink); }
-  .check-toggle{
-    background:none; border:none; color:var(--accent); font-family:inherit;
-    font-size:12px; font-weight:500; cursor:pointer; padding:0; margin-top:10px;
-  }
-  .check-toggle:hover{ text-decoration:underline; }
+  .essay-model strong{ color:var(--ink); }
   .quiz-footer{ padding:18px 22px; display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
 
   footer.note{
@@ -418,29 +389,20 @@
     page-break-inside:avoid;
   }
   #pdfExport .pdf-q b{ color:#23439E; }
-  #pdfExport .pdf-opts{ margin:0 0 14px 18px; padding:0; list-style:none; }
+  #pdfExport .pdf-opts{ margin:0 0 8px 18px; padding:0; list-style:none; }
   #pdfExport .pdf-opts li{
     font-size:12px; line-height:1.55; margin-bottom:4px; color:#161A20;
   }
   #pdfExport .pdf-opt-letter{ font-weight:600; margin-right:6px; }
-  #pdfExport .pdf-essay-block{ margin:0 0 22px; page-break-inside:avoid; }
-  #pdfExport .pdf-essay-lines{
-    margin-top:8px;
-    border-bottom:1px solid #C9CFDA;
-    height:22px;
+  #pdfExport .pdf-qblock{ margin:0 0 18px; page-break-inside:avoid; }
+  #pdfExport .pdf-answer-line{
+    font-size:11.5px; font-weight:700; color:#1B7A50; margin:0;
   }
-  #pdfExport .pdf-answerkey{
-    margin-top:26px;
-    padding-top:14px;
-    border-top:2px solid #23439E;
-  }
-  #pdfExport .pdf-answerkey-item{
-    font-size:11.5px; line-height:1.7; color:#5B6472;
-  }
-  #pdfExport .pdf-answerkey-item b{ color:#161A20; }
+  #pdfExport .pdf-essay-block{ margin:0 0 18px; page-break-inside:avoid; }
   #pdfExport .pdf-model-answer{
-    font-size:11.5px; line-height:1.6; color:#5B6472; margin:2px 0 14px;
+    font-size:11.5px; line-height:1.6; color:#5B6472; margin:4px 0 0;
   }
+  #pdfExport .pdf-model-answer b{ color:#161A20; }
 </style>
 </head>
 <body>
@@ -709,9 +671,10 @@ function renderQuiz(quiz){
   quizSection.classList.remove('hidden');
   quizSection.innerHTML = '';
 
+  const totalSoal = quiz.mcq.length + quiz.essay.length;
   const header = document.createElement('div');
   header.className = 'quiz-header';
-  header.innerHTML = `<h2>${escapeHtml(quiz.topic || 'Soal latihan')}</h2><span class="score-badge" id="scoreBadge"></span>`;
+  header.innerHTML = `<h2>${escapeHtml(quiz.topic || 'Soal latihan')}</h2><span class="score-badge">${totalSoal} soal</span>`;
   quizSection.appendChild(header);
 
   if (quiz.mcq.length){
@@ -722,22 +685,15 @@ function renderQuiz(quiz){
       const card = document.createElement('div');
       card.className = 'qcard';
       const optsHtml = q.options.map((opt, oi) => `
-        <label class="option" data-oi="${oi}">
-          <input type="radio" name="mcq-${i}" value="${oi}">
-          <span>${escapeHtml(opt)}</span>
-          <span class="tag"></span>
-        </label>
+        <div class="static-option">${OPTION_LETTERS[oi] || (oi + 1)}) ${escapeHtml(opt)}</div>
       `).join('');
+      const correctLetter = OPTION_LETTERS[q.correct_index] || (q.correct_index + 1);
       card.innerHTML = `
         <p class="qtext"><span class="qnum">${i + 1}.</span> ${escapeHtml(q.question)}</p>
-        <div class="options" id="mcq-opts-${i}">${optsHtml}</div>
-        <div class="explain" id="mcq-explain-${i}"><strong>Penjelasan:</strong> ${escapeHtml(q.explanation || '')}</div>
+        <div class="static-options">${optsHtml}</div>
+        <div class="answer-line">Menjawab: ${correctLetter}${q.explanation ? `<span class="answer-detail"> — ${escapeHtml(q.explanation)}</span>` : ''}</div>
       `;
       g.appendChild(card);
-
-      card.querySelectorAll(`input[name="mcq-${i}"]`).forEach(radio => {
-        radio.addEventListener('change', () => checkMcq(i, q));
-      });
     });
     quizSection.appendChild(g);
   }
@@ -751,16 +707,9 @@ function renderQuiz(quiz){
       card.className = 'qcard';
       card.innerHTML = `
         <p class="qtext"><span class="qnum">${i + 1}.</span> ${escapeHtml(q.question)}</p>
-        <textarea class="essay-answer" placeholder="Tulis jawabanmu di sini..." id="essay-ans-${i}"></textarea>
-        <button class="check-toggle" data-idx="${i}">Lihat contoh jawaban</button>
-        <div class="model-answer" id="essay-model-${i}"><strong>Contoh jawaban:</strong> ${escapeHtml(q.model_answer || '')}</div>
+        <div class="essay-model"><strong>Jawaban:</strong> ${escapeHtml(q.model_answer || '-')}</div>
       `;
       g.appendChild(card);
-      card.querySelector('.check-toggle').addEventListener('click', (e) => {
-        const el = document.getElementById(`essay-model-${i}`);
-        el.classList.toggle('show');
-        e.target.textContent = el.classList.contains('show') ? 'Sembunyikan contoh jawaban' : 'Lihat contoh jawaban';
-      });
     });
     quizSection.appendChild(g);
   }
@@ -779,45 +728,7 @@ function renderQuiz(quiz){
   });
   document.getElementById('downloadPdfBtn').addEventListener('click', downloadQuizPdf);
 
-  window.__quizState = { mcqTotal: quiz.mcq.length, mcqAnswered: 0, mcqCorrect: 0 };
-  updateScoreBadge();
-
   quizSection.scrollIntoView({ behavior: 'smooth' });
-}
-
-function checkMcq(i, q){
-  const wrap = document.getElementById(`mcq-opts-${i}`);
-  const options = wrap.querySelectorAll('.option');
-  const selected = wrap.querySelector(`input[name="mcq-${i}"]:checked`);
-  const selVal = parseInt(selected.value);
-
-  if (!wrap.dataset.answered){
-    wrap.dataset.answered = '1';
-    window.__quizState.mcqAnswered++;
-    if (selVal === q.correct_index) window.__quizState.mcqCorrect++;
-    updateScoreBadge();
-  }
-
-  options.forEach(opt => {
-    const oi = parseInt(opt.dataset.oi);
-    opt.querySelector('input').disabled = true;
-    const tag = opt.querySelector('.tag');
-    if (oi === q.correct_index){
-      opt.classList.add('correct');
-      tag.textContent = 'Benar';
-    } else if (oi === selVal){
-      opt.classList.add('wrong');
-      tag.textContent = 'Pilihanmu';
-    }
-  });
-  document.getElementById(`mcq-explain-${i}`).classList.add('show');
-}
-
-function updateScoreBadge(){
-  const s = window.__quizState;
-  const badge = document.getElementById('scoreBadge');
-  if (!badge || !s || s.mcqTotal === 0) return;
-  badge.textContent = `Skor PG: ${s.mcqCorrect}/${s.mcqAnswered} terjawab dari ${s.mcqTotal}`;
 }
 
 /* ================== EXPORT PDF ================== */
@@ -830,45 +741,32 @@ function buildPdfHtml(quiz){
   html += `<div class="pdf-sub">Nama: __________________________&nbsp;&nbsp;&nbsp;&nbsp; Kelas: ___________&nbsp;&nbsp;&nbsp;&nbsp; Tanggal: ___________</div>`;
 
   if (quiz.mcq.length){
-    html += `<div class="pdf-section-title">Bagian A — Pilihan Ganda</div>`;
+    html += `<div class="pdf-section-title">Pilihan Ganda</div>`;
     quiz.mcq.forEach((q, i) => {
+      const correctLetter = OPTION_LETTERS[q.correct_index] || (q.correct_index + 1);
+      html += `<div class="pdf-qblock">`;
       html += `<p class="pdf-q"><b>${i + 1}.</b> ${escapeHtml(q.question)}</p>`;
       html += `<ul class="pdf-opts">`;
       q.options.forEach((opt, oi) => {
-        html += `<li><span class="pdf-opt-letter">${OPTION_LETTERS[oi] || oi + 1}.</span>${escapeHtml(opt)}</li>`;
+        html += `<li><span class="pdf-opt-letter">${OPTION_LETTERS[oi] || oi + 1})</span>${escapeHtml(opt)}</li>`;
       });
       html += `</ul>`;
-    });
-  }
-
-  if (quiz.essay.length){
-    html += `<div class="pdf-section-title">Bagian B — Essay</div>`;
-    quiz.essay.forEach((q, i) => {
-      html += `<div class="pdf-essay-block">`;
-      html += `<p class="pdf-q"><b>${i + 1}.</b> ${escapeHtml(q.question)}</p>`;
-      html += `<div class="pdf-essay-lines"></div><div class="pdf-essay-lines"></div><div class="pdf-essay-lines"></div>`;
+      html += `<p class="pdf-answer-line">Menjawab: ${correctLetter}`;
+      if (q.explanation) html += ` — ${escapeHtml(q.explanation)}`;
+      html += `</p>`;
       html += `</div>`;
     });
   }
 
-  // Halaman kunci jawaban terpisah
-  html += `<div class="pdf-answerkey" style="page-break-before:always;">`;
-  html += `<div class="pdf-section-title" style="margin-top:0;">Kunci Jawaban</div>`;
-  if (quiz.mcq.length){
-    quiz.mcq.forEach((q, i) => {
-      const letter = OPTION_LETTERS[q.correct_index] || (q.correct_index + 1);
-      html += `<p class="pdf-answerkey-item"><b>${i + 1}.</b> ${letter}. ${escapeHtml(q.options[q.correct_index] || '')}`;
-      if (q.explanation) html += ` — ${escapeHtml(q.explanation)}`;
-      html += `</p>`;
-    });
-  }
   if (quiz.essay.length){
+    html += `<div class="pdf-section-title">Essay</div>`;
     quiz.essay.forEach((q, i) => {
-      html += `<p class="pdf-answerkey-item" style="margin-top:10px;"><b>Essay ${i + 1}.</b></p>`;
-      html += `<p class="pdf-model-answer">${escapeHtml(q.model_answer || '-')}</p>`;
+      html += `<div class="pdf-essay-block">`;
+      html += `<p class="pdf-q"><b>${i + 1}.</b> ${escapeHtml(q.question)}</p>`;
+      html += `<p class="pdf-model-answer"><b>Jawaban:</b> ${escapeHtml(q.model_answer || '-')}</p>`;
+      html += `</div>`;
     });
   }
-  html += `</div>`;
 
   return html;
 }
